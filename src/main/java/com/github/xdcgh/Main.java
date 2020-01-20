@@ -1,5 +1,6 @@
 package com.github.xdcgh;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -13,13 +14,15 @@ import org.jsoup.nodes.Element;
 import java.io.IOException;
 import java.sql.*;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 public class Main {
+    private static final String USER_NAME = "root";
+    private static final String PASSWORD = "1234";
+
+    @SuppressFBWarnings("DMI_CONSTANT_DB_PASSWORD")
     public static void main(String[] args) throws IOException, SQLException {
-        Connection connection = DriverManager.getConnection("jdbc:h2:file:C:/Users/14344/IdeaProjects/xiedaimala-crawler/news", "root", "1234");
+        Connection connection = DriverManager.getConnection("jdbc:h2:file:C:/Users/14344/IdeaProjects/xiedaimala-crawler/news", USER_NAME, PASSWORD);
 
         while (true) {
             // 待处理的连接池
@@ -34,51 +37,63 @@ public class Main {
             // 从待处理池子中捞一个来处理
             // 处理完后从池子（包括数据库）中删除
             String link = linkPool.remove(linkPool.size() - 1);
-            try (PreparedStatement statement = connection.prepareStatement("DELETE FROM LINKS_TO_BE_PROCESSED WHERE LINK = ?")) {
-                statement.setString(1, link);
-                statement.executeUpdate();
-            }
+            /*
+                这里的名字有问题，要删除数据库中的这个link
+             */
+            insertLinkIntoDatabase(connection, link, "DELETE FROM LINKS_TO_BE_PROCESSED WHERE LINK = ?");
 
             // 询问数据库，当前链接是否被处理过了
-            Boolean flag = false;
-            try (PreparedStatement statement = connection.prepareStatement("SELECT LINK FROM LINKS_ALREADY_PROCESSED WHERE LINK = ?")) {
-                statement.setString(1,link);
-                ResultSet resultSet = statement.executeQuery();
-                while (resultSet.next()) {
-                    flag = true;
-                }
-            }
-
-            if (flag) {
+            if (isLinkProcessed(connection, link)) {
                 continue;
             }
-            // 这是我们感兴趣的链接
+
             if (isInterestingLink(link)) {
                 Document doc = httpGetAndParseHtml(link);
-                // 把doc 页面内所有的<a> 标签，链接（href）仍进连接池
-                for (Element aTag : doc.select("a")) {
-                    String href = aTag.attr("href");
-                    try (PreparedStatement statement = connection.prepareStatement("INSERT INTO LINKS_TO_BE_PROCESSED (LINK) VALUES (?)")) {
-                        statement.setString(1, href);
-                        statement.executeUpdate();
-                    }
-                }
-                // 假如这是一个新闻的详情页面，就存入数据库，否则，就什么都不做
+
+                parseUrlsFromPageAndStoreIntoDatabase(connection, doc);
+
                 storeIntoDatabaseIfItIsNewsPage(doc);
 
-                try (PreparedStatement statement = connection.prepareStatement("INSERT INTO LINKS_ALREADY_PROCESSED (LINK) VALUES (?)")) {
-                    statement.setString(1, link);
-                    statement.executeUpdate();
-                }
+                insertLinkIntoDatabase(connection, link, "INSERT INTO LINKS_ALREADY_PROCESSED (LINK) VALUES (?)");
             }
+        }
+    }
+
+    // 把doc 页面内所有的<a> 标签，链接（href）仍进连接池
+    private static void parseUrlsFromPageAndStoreIntoDatabase(Connection connection, Document doc) throws SQLException {
+        for (Element aTag : doc.select("a")) {
+            String href = aTag.attr("href");
+            insertLinkIntoDatabase(connection, href, "INSERT INTO LINKS_TO_BE_PROCESSED (LINK) VALUES (?)");
+        }
+    }
+
+    private static Boolean isLinkProcessed(Connection connection, String link) throws SQLException {
+        ResultSet resultSet = null;
+        try (PreparedStatement statement = connection.prepareStatement("SELECT LINK FROM LINKS_ALREADY_PROCESSED WHERE LINK = ?")) {
+            statement.setString(1, link);
+            resultSet = statement.executeQuery();
+            if (resultSet.next()) {
+                return true;
+            }
+        }finally {
+            if (resultSet != null) {
+                resultSet.close();
+            }
+        }
+        return false;
+    }
+
+    private static void insertLinkIntoDatabase(Connection connection, String link, String sql) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, link);
+            statement.executeUpdate();
         }
     }
 
     private static List<String> loadUrlsFromDatabase(Connection connection, String sql) throws SQLException {
         List<String> results = new ArrayList<>();
 
-        try (PreparedStatement statement = connection.prepareStatement(sql)) {
-            ResultSet resultSet = statement.executeQuery();
+        try (PreparedStatement statement = connection.prepareStatement(sql); ResultSet resultSet = statement.executeQuery()) {
             while (resultSet.next()) {
                 results.add(resultSet.getString(1));
             }
@@ -87,6 +102,7 @@ public class Main {
         return results;
     }
 
+    // 假如这是一个新闻的详情页面，就存入数据库，否则，就什么都不做
     private static void storeIntoDatabaseIfItIsNewsPage(Document doc) {
         ArrayList<Element> articleTags = doc.select("article");
         if (!articleTags.isEmpty()) {
