@@ -4,14 +4,14 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import java.sql.*;
 
-public class DatabaseAccessObject {
+public class JdbcCrawlerDao implements CrawlerDao {
     private static final String USER_NAME = "root";
     private static final String PASSWORD = "1234";
 
     private final Connection connection;
 
     @SuppressFBWarnings("DMI_CONSTANT_DB_PASSWORD")
-    public DatabaseAccessObject() {
+    public JdbcCrawlerDao() {
         try {
             this.connection = DriverManager.getConnection("jdbc:h2:file:C:/Users/14344/IdeaProjects/xiedaimala-crawler/news", USER_NAME, PASSWORD);
         } catch (SQLException e) {
