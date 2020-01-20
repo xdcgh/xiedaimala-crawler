@@ -128,7 +128,6 @@ public class Main {
 
                     statement.executeUpdate();
                 }
-            }
         }
     }
 
