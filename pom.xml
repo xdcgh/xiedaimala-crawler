@@ -125,7 +125,7 @@
                 <version>6.1.4</version>
                 <configuration>
 <!--                    <url>jdbc:h2:file:C:/Users/14344/IdeaProjects/xiedaimala-crawler/news</url>-->
-                    <url>jdbc:mysql://localhost:3306/news?characterEncoding=utf-8</url>
+                    <url>jdbc:mysql://localhost:3305/news?characterEncoding=utf-8</url>
                     <user>root</user>
                     <password>1234</password>
                 </configuration>

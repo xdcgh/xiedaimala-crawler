@@ -15,40 +15,44 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 
-public class Crawler {
-    private final CrawlerDao dao = new MyBatisCrawlerDao();
+public class Crawler extends Thread{
+    private final CrawlerDao dao;
 
-    public static void main(String[] args) throws IOException, SQLException {
-        new Crawler().run();
+    public Crawler(CrawlerDao dao) {
+        this.dao = dao;
     }
 
-    public void run() throws IOException, SQLException {
+    @Override
+    public void run() {
+        try {
+            String link;
 
-        String link;
+            // 从数据库中加载下一个链接，如果能加载到，则进行循环
+            while ((link = dao.getNextLinkThenDelete()) != null) {
+                // 询问数据库，当前链接是否被处理过了
+                if (dao.isLinkProcessed(link)) {
+                    continue;
+                }
 
-        // 从数据库中加载下一个链接，如果能加载到，则进行循环
-        while ((link = dao.getNextLinkThenDelete()) != null) {
-            // 询问数据库，当前链接是否被处理过了
-            if (dao.isLinkProcessed(link)) {
-                continue;
+                if (isInterestingLink(link)) {
+                    System.out.println(link);
+
+                    Document doc = httpGetAndParseHtml(link);
+
+                    parseUrlsFromPageAndStoreIntoDatabase(doc);
+
+                    storeIntoDatabaseIfItIsNewsPage(doc, link);
+
+                    dao.insertProcessedLink(link);
+                }
             }
-
-            if (isInterestingLink(link)) {
-                System.out.println(link);
-
-                Document doc = httpGetAndParseHtml(link);
-
-                parseUrlsFromPageAndStoreIntoDatabase(doc);
-
-                storeIntoDatabaseIfItIsNewsPage(doc, link);
-
-                dao.insertProcessedLink(link);
-            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 
     // 把doc 页面内所有的<a> 标签，链接（href）仍进连接池
-    private void parseUrlsFromPageAndStoreIntoDatabase(Document doc) throws SQLException {
+    private void parseUrlsFromPageAndStoreIntoDatabase(Document doc) {
         for (Element aTag : doc.select("a")) {
             String href = aTag.attr("href");
 
@@ -102,7 +106,8 @@ public class Crawler {
     }
 
     private static boolean isInterestingLink(String link) {
-        return (isNewsPage(link) || isIndexPage(link)) && isNotLoginPage(link) && !link.contains("\\");
+        return (isNewsPage(link) || isIndexPage(link)) && isNotLoginPage(link) && !link.contains("\\"); // 注意，要处理掉含\的情况
+//        return isIndexPage(link) || (isNotLoginPage(link) && !link.contains("\\") && !link.contains("javascript"));
     }
 
     private static boolean isIndexPage(String link) {
