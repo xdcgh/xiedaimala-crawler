@@ -14,7 +14,7 @@
     </delete>
     <insert id="insertNews" parameterType="com.github.xdcgh.News">
         INSERT INTO NEWS (TITLE, CONTENT, URL, CREATED_AT, MODIFIED_AT)
-        VALUES (#{url}, #{title}, #{content}, NOW(), NOW())
+        VALUES (#{title}, #{content}, #{url}, NOW(), NOW())
     </insert>
     <insert id="insertLink" parameterType="HashMap">
         insert into
