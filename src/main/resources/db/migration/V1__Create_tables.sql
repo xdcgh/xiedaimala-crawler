@@ -1,4 +1,5 @@
--- 设置MySQL数据库的编码为utf-8
+-- MySQL的初始化和设置编码为utf-8
+-- create database news;
 -- alter database news character set = utf8mb4 collate = utf8mb4_unicode_ci;
 
 CREATE TABLE LINKS_TO_BE_PROCESSED (LINK VARCHAR(10000));
