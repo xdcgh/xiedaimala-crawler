@@ -1,3 +1,6 @@
+-- 设置MySQL数据库的编码为utf-8
+-- alter database news character set = utf8mb4 collate = utf8mb4_unicode_ci;
+
 CREATE TABLE LINKS_TO_BE_PROCESSED (LINK VARCHAR(10000));
 CREATE TABLE LINKS_ALREADY_PROCESSED (LINK VARCHAR(10000));
 CREATE TABLE NEWS (
