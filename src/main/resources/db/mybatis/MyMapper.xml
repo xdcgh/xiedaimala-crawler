@@ -26,6 +26,6 @@
                 LINKS_TO_BE_PROCESSED
             </otherwise>
         </choose>
-        (LINK) values #{link}
+        (LINK) values (#{link})
     </insert>
 </mapper>
