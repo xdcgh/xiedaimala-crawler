@@ -19,7 +19,7 @@ public class JdbcCrawlerDao implements CrawlerDao {
         }
     }
 
-    public String getNextLink(String sql) throws SQLException {
+    private String getNextLink(String sql) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement(sql); ResultSet resultSet = statement.executeQuery()) {
             if (resultSet.next()) {
                 return resultSet.getString(1);
@@ -46,11 +46,11 @@ public class JdbcCrawlerDao implements CrawlerDao {
         }
     }
 
-    public void insertNewsIntoDatabase(String link, String title, String content) throws SQLException {
+    public void insertNewsIntoDatabase(String url, String title, String content) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("INSERT INTO NEWS (TITLE, CONTENT, URL, CREATED_AT, MODIFIED_AT) VALUES (?, ?, ?, NOW(), NOW())")) {
             statement.setString(1, title);
             statement.setString(2, content);
-            statement.setString(3, link);
+            statement.setString(3, url);
 
             statement.executeUpdate();
         }
@@ -70,5 +70,15 @@ public class JdbcCrawlerDao implements CrawlerDao {
             }
         }
         return false;
+    }
+
+    @Override
+    public void insertProcessedLink(String link) {
+
+    }
+
+    @Override
+    public void insertLinkToBeProcessed(String link) {
+
     }
 }

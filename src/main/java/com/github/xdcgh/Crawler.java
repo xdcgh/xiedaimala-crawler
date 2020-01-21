@@ -16,7 +16,7 @@ import java.util.ArrayList;
 import java.util.stream.Collectors;
 
 public class Crawler {
-    private final CrawlerDao dao = new JdbcCrawlerDao();
+    private final CrawlerDao dao = new MyBatisCrawlerDao();
 
     public static void main(String[] args) throws IOException, SQLException {
         new Crawler().run();
@@ -42,13 +42,13 @@ public class Crawler {
 
                 storeIntoDatabaseIfItIsNewsPage(doc, link);
 
-                dao.updateDatabase( link, "INSERT INTO LINKS_ALREADY_PROCESSED (LINK) VALUES (?)");
+                dao.insertProcessedLink(link);
             }
         }
     }
 
     // 把doc 页面内所有的<a> 标签，链接（href）仍进连接池
-    private void parseUrlsFromPageAndStoreIntoDatabase( Document doc) throws SQLException {
+    private void parseUrlsFromPageAndStoreIntoDatabase(Document doc) throws SQLException {
         for (Element aTag : doc.select("a")) {
             String href = aTag.attr("href");
 
@@ -61,14 +61,14 @@ public class Crawler {
                     || !href.contains("\\/")
                     || !href.contains("#")
                     || !href.contains(" ")) {
-                dao.updateDatabase( href, "INSERT INTO LINKS_TO_BE_PROCESSED (LINK) VALUES (?)");
+                dao.insertLinkToBeProcessed(href);
             }
 
         }
     }
 
     // 假如这是一个新闻的详情页面，就存入数据库，否则，就什么都不做
-    private void storeIntoDatabaseIfItIsNewsPage( Document doc, String link) throws SQLException {
+    private void storeIntoDatabaseIfItIsNewsPage(Document doc, String link) throws SQLException {
         ArrayList<Element> articleTags = doc.select("article");
         if (!articleTags.isEmpty()) {
             for (Element articleTag :
